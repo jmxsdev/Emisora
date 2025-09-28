@@ -49,32 +49,32 @@ A continuación se presenta un diagrama de flujo que describe la operación del 
 
 ```mermaid
 graph TD
-    A[Inicio] --> B{Leer Archivos de Entrada};
-    B --> C[Cargar Datos en Memoria];
-    C --> D{Mostrar Menú Principal};
-    D --> E{Opción: Generar Semana};
-    D --> F{Opción: Consultar Momento};
-    D --> G{Opción: Mostrar Día};
-    D --> H[Opción: Salir];
+    A[Inicio] --> B{Leer Archivos de Entrada}
+    B --> C[Cargar Datos en Memoria]
+    C --> D{Mostrar Menú Principal}
+    D --> E{Opción: Generar Semana}
+    D --> F{Opción: Consultar Momento}
+    D --> G{Opción: Mostrar Día}
+    D --> H[Opción: Salir]
 
-    E --> I[Bucle de 7 días];
-    I --> J[llamar a generar_programacion_dia(dia)];
-    J --> K[llamar a guardar_grilla_dia(dia)];
-    K --> I;
-    I -->|Finalizado| D;
+    E --> I[Bucle de 7 días]
+    I --> J["llamar a generar_programacion_dia(dia)"]
+    J --> K["llamar a guardar_grilla_dia(dia)"]
+    K --> I
+    I -->|Finalizado| D
 
-    F --> L[Solicitar Día y Hora];
-    L --> M[llamar a generar_programacion_dia(dia)];
-    M --> N[Buscar en la programación generada];
-    N --> O[Mostrar resultado en pantalla];
-    O --> D;
+    F --> L[Solicitar Día y Hora]
+    L --> M["llamar a generar_programacion_dia(dia)"]
+    M --> N[Buscar en la programación generada]
+    N --> O[Mostrar resultado en pantalla]
+    O --> D
 
-    G --> P[Solicitar Día];
-    P --> Q[llamar a generar_programacion_dia(dia)];
-    Q --> R[Iterar y mostrar programación del día];
-    R --> D;
+    G --> P[Solicitar Día]
+    P --> Q["llamar a generar_programacion_dia(dia)"]
+    Q --> R[Iterar y mostrar programación del día]
+    R --> D
 
-    H --> S[Fin];
+    H --> S[Fin]
 ```
 
 ## Posibles Mejoras
