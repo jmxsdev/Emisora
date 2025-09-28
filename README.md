@@ -61,7 +61,7 @@ graph TD
     I --> J[llamar a generar_programacion_dia(dia)];
     J --> K[llamar a guardar_grilla_dia(dia)];
     K --> I;
-    I -- Finalizado --> D;
+    I -->|Finalizado| D;
 
     F --> L[Solicitar Día y Hora];
     L --> M[llamar a generar_programacion_dia(dia)];
