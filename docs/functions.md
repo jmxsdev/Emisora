@@ -19,24 +19,24 @@ Este diagrama ilustra el flujo de ejecución principal desde que el programa ini
 
 ```mermaid
 graph TD
-    A[Inicio] --> B[leer_canciones, leer_publicidad, leer_shows];
-    B --> C{Carga de datos completa};
-    C --> D[mostrar_menu];
-    D --> E{Selección de usuario};
-    E -- 1. Generar Semana --> F[Bucle de 7 días];
-    F --> G[generar_programacion_dia(día)];
-    G --> H[guardar_grilla_dia(día)];
-    H -- Siguiente día --> F;
-    F -- Bucle finalizado --> D;
-    E -- 2. Consultar Momento --> I[Solicitar día y hora];
-    I --> J[generar_programacion_dia(día)];
-    J --> K[consultar_momento_especifico];
-    K --> D;
-    E -- 3. Mostrar Día --> L[Solicitar día];
-    L --> M[generar_programacion_dia(día)];
-    M --> N[Mostrar parrilla por pantalla];
-    N --> D;
-    E -- 4. Salir --> O[Fin];
+    A["Inicio"] --> B["leer_canciones, leer_publicidad, leer_shows"]
+    B --> C{"Carga de datos completa"}
+    C --> D["mostrar_menu"]
+    D --> E{"Selección de usuario"}
+    E -->|"1. Generar Semana"| F["Bucle de 7 días"]
+    F --> G["generar_programacion_dia(dia)"]
+    G --> H["guardar_grilla_dia(dia)"]
+    H -->|"Siguiente día"| F
+    F -->|"Bucle finalizado"| D
+    E -->|"2. Consultar Momento"| I["Solicitar día y hora"]
+    I --> J["generar_programacion_dia(dia)"]
+    J --> K["consultar_momento_especifico"]
+    K --> D
+    E -->|"3. Mostrar Día"| L["Solicitar día"]
+    L --> M["generar_programacion_dia(dia)"]
+    M --> N["Mostrar parrilla por pantalla"]
+    N --> D
+    E -->|"4. Salir"| O["Fin"]
 ```
 
 ---
@@ -96,28 +96,28 @@ El núcleo lógico del sistema.
 
 ```mermaid
 graph TD
-    A[Inicio de generar_programacion_dia] --> B[Inicializar contadores y tiempo_actual = 300s];
-    B --> C{Bucle: tiempo_actual < Fin del Día?};
-    C -- Sí --> D{¿Es Horario Estelar?};
-    D -- Sí --> E{Prioridad: ¿Programar Show? (rand() < 60)};
-    E -- Sí --> F{Buscar show de alta preferencia disponible};
-    F -- Encontrado --> G[Añadir Show a la parrilla];
-    G --> H[Actualizar tiempo_actual y contadores];
-    H --> C;
-    F -- No Encontrado --> I{Prioridad: ¿Programar Publicidad? (rand() < 30)};
-    D -- No --> I;
-    E -- No --> I;
-    I -- Sí --> J{Buscar publicidad con cuota por cumplir};
-    J -- Encontrada --> K[Añadir Publicidad a la parrilla];
-    K --> H;
-    J -- No Encontrada --> L[Programar Canción (por defecto)];
-    I -- No --> L;
-    L --> M{Buscar canción válida (que quepa y no se repita)};
-    M -- Encontrada --> N[Añadir Canción a la parrilla];
-    N --> H;
-    M -- No Encontrada --> O{Fin del Bucle};
-    C -- No --> O;
-    O --> P[Fin de la función];
+    A["Inicio de generar_programacion_dia"] --> B["Inicializar contadores y tiempo_actual = 300s"]
+    B --> C{"Bucle: tiempo_actual < Fin del Día?"}
+    C -->|"Sí"| D{"¿Es Horario Estelar?"}
+    D -->|"Sí"| E{"Prioridad: ¿Programar Show? (rand() < 60)"}
+    E -->|"Sí"| F{"Buscar show de alta preferencia disponible"}
+    F -->|"Encontrado"| G["Añadir Show a la parrilla"]
+    G --> H["Actualizar tiempo_actual y contadores"]
+    H --> C
+    F -->|"No Encontrado"| I{"Prioridad: ¿Programar Publicidad? (rand() < 30)"}
+    D -->|"No"| I
+    E -->|"No"| I
+    I -->|"Sí"| J{"Buscar publicidad con cuota por cumplir"}
+    J -->|"Encontrada"| K["Añadir Publicidad a la parrilla"]
+    K --> H
+    J -->|"No Encontrada"| L["Programar Canción (por defecto)"]
+    I -->|"No"| L
+    L --> M{"Buscar canción válida (que quepa y no se repita)"}
+    M -->|"Encontrada"| N["Añadir Canción a la parrilla"]
+    N --> H
+    M -->|"No Encontrada"| O{"Fin del Bucle"}
+    C -->|"No"| O
+    O --> P["Fin de la función"]
 ```
 
 ---
