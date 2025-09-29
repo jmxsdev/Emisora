@@ -292,12 +292,65 @@ void generar_programacion_dia(int dia_semana) {
     }
 }
 
-// Función para guardar la grilla de un día
-void guardar_grilla_dia(int dia_semana) {
-    char *nombres_dias[] = {
-        "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"
-    };
+// --- Funciones de Persistencia ---
+
+// Nombres de los días para los archivos
+const char *nombres_dias[] = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"};
+
+int verificar_grilla_existe(const char* dia_nombre) {
+    char nombre_archivo[50];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", dia_nombre);
+    FILE *archivo = fopen(nombre_archivo, "r");
+    if (archivo) {
+        fclose(archivo);
+        return 1; // Existe
+    }
+    return 0; // No existe
+}
+
+int cargar_grilla_desde_archivo(const char* dia_nombre) {
+    char nombre_archivo[50];
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", dia_nombre);
+    FILE *archivo = fopen(nombre_archivo, "r");
+    if (archivo == NULL) {
+        return 0; // No se pudo abrir
+    }
+
+    num_elementos = 0;
+    char linea[200]; // Buffer para una línea
+
+    // Leer línea por línea para mayor robustez
+    while (fgets(linea, sizeof(linea), archivo) != NULL && num_elementos < MAX_ELEMENTOS) {
+        int horas, minutos, segundos;
+        char tipo;
+        char nombre_buffer[101] = ""; // Inicializar para seguridad
+
+        // Parsear la línea desde el buffer
+        if (sscanf(linea, "%d %d %d %c %100[^\n]", &horas, &minutos, &segundos, &tipo, nombre_buffer) == 5) {
+            programacion_dia[num_elementos].hora_inicio = horas * 3600 + minutos * 60 + segundos;
+            programacion_dia[num_elementos].tipo = tipo;
+            strncpy(programacion_dia[num_elementos].nombre, nombre_buffer, 100);
+            programacion_dia[num_elementos].nombre[100] = '\0';
+
+            // Calcular la duración basándose en el inicio del siguiente elemento
+            if (num_elementos > 0) {
+                programacion_dia[num_elementos - 1].duracion_segundos = 
+                    programacion_dia[num_elementos].hora_inicio - programacion_dia[num_elementos - 1].hora_inicio - 1;
+            }
+            num_elementos++;
+        }
+    }
     
+    // Calcular la duración del último elemento de la parrilla
+    if (num_elementos > 0) {
+        programacion_dia[num_elementos - 1].duracion_segundos = SEGUNDOS_DIA - programacion_dia[num_elementos - 1].hora_inicio;
+    }
+
+    fclose(archivo);
+    return num_elementos;
+}
+
+void guardar_grilla_en_archivo(int dia_semana) {
     char nombre_archivo[50];
     snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", nombres_dias[dia_semana]);
     
@@ -311,20 +364,21 @@ void guardar_grilla_dia(int dia_semana) {
         int total_segundos = programacion_dia[i].hora_inicio;
         int horas = total_segundos / 3600;
         int minutos = (total_segundos % 3600) / 60;
-        int segundos = total_segundos % 60;
+        int segundos_inicio = total_segundos % 60;
         
         fprintf(archivo, "%02d %02d %02d %c %s\n", 
-                horas, minutos, segundos,
+                horas, minutos, segundos_inicio,
                 programacion_dia[i].tipo,
                 programacion_dia[i].nombre);
     }
     
     fclose(archivo);
-    printf("Grilla para %s generada exitosamente\n", nombres_dias[dia_semana]);
+    printf("Grilla para %s guardada exitosamente.\n", nombres_dias[dia_semana]);
 }
 
-// Función para mostrar la programación en un momento específico
-void consultar_momento_especifico(int dia, int hora, int minuto, int segundo) {
+// --- Funciones de Consulta y Menú ---
+
+void consultar_momento_especifico(int hora, int minuto, int segundo) {
     int tiempo_busqueda = hora * 3600 + minuto * 60 + segundo;
     
     printf("Programación para las %02d:%02d:%02d:\n", hora, minuto, segundo);
@@ -334,115 +388,142 @@ void consultar_momento_especifico(int dia, int hora, int minuto, int segundo) {
             programacion_dia[i].hora_inicio + programacion_dia[i].duracion_segundos > tiempo_busqueda) {
             
             int total_segundos = programacion_dia[i].hora_inicio;
-            int horas = total_segundos / 3600;
-            int minutos = (total_segundos % 3600) / 60;
+            int horas_inicio = total_segundos / 3600;
+            int minutos_inicio = (total_segundos % 3600) / 60;
             int segundos_inicio = total_segundos % 60;
             
             printf("En curso: %c %s (Inició: %02d:%02d:%02d, Duración: %d segundos)\n",
                    programacion_dia[i].tipo,
                    programacion_dia[i].nombre,
-                   horas, minutos, segundos_inicio,
+                   horas_inicio, minutos_inicio, segundos_inicio,
                    programacion_dia[i].duracion_segundos);
             return;
         }
     }
     
-    printf("No hay programación en este momento\n");
+    printf("No hay programación en este momento.\n");
 }
 
-// Función para mostrar el menú principal
+void mostrar_programacion_completa() {
+    printf("\n--- Programación Completa del Día ---\n");
+    for (int i = 0; i < num_elementos; i++) {
+        int total_segundos = programacion_dia[i].hora_inicio;
+        int horas = total_segundos / 3600;
+        int minutos = (total_segundos % 3600) / 60;
+        int segundos_inicio = total_segundos % 60;
+        
+        printf("%02d:%02d:%02d %c %s\n", 
+               horas, minutos, segundos_inicio,
+               programacion_dia[i].tipo,
+               programacion_dia[i].nombre);
+    }
+    printf("--- Fin de la Programación ---\n");
+}
+
 void mostrar_menu() {
     printf("\n=== SISTEMA DE PROGRAMACIÓN ÉXITOS FM ===\n");
     printf("1. Generar grilla para toda la semana\n");
-    printf("2. Consultar programación para un momento específico\n");
-    printf("3. Mostrar programación del día actual\n");
+    printf("2. Consultar programación de un día\n");
+    printf("3. Consultar programación en un momento específico\n");
     printf("4. Salir\n");
     printf("Seleccione una opción: ");
 }
 
 int main() {
-    // Leer archivos de entrada
+    // Leer archivos de entrada de contenido
     leer_canciones();
     leer_publicidad();
     leer_shows();
     
-    printf("Datos cargados:\n");
-    printf("- Canciones: %d\n", num_canciones);
-    printf("- Publicidades: %d\n", num_publicidades);
-    printf("- Shows: %d\n", num_shows);
+    printf("Datos de contenido cargados:\n");
+    printf("- Canciones: %d\n- Publicidades: %d\n- Shows: %d\n", num_canciones, num_publicidades, num_shows);
     
     int opcion;
-    int dia_actual = 0; // 0 = lunes, 6 = domingo
     
     do {
         mostrar_menu();
         scanf("%d", &opcion);
         
         switch (opcion) {
-            case 1:
-                // Generar grilla para toda la semana
+            case 1: { // Generar grilla para toda la semana
+                printf("Generando grillas para toda la semana...\n");
                 for (int dia = 0; dia < 7; dia++) {
                     generar_programacion_dia(dia);
-                    guardar_grilla_dia(dia);
+                    guardar_grilla_en_archivo(dia);
                 }
-                printf("Grillas para toda la semana generadas exitosamente\n");
+                printf("¡Grillas para toda la semana generadas exitosamente!\n");
                 break;
-                
-            case 2:
-                // Consultar programación para un momento específico
-                {
-                    int dia, hora, minuto, segundo;
-                    printf("Ingrese el día (0=lunes, 1=martes, ..., 6=domingo): ");
-                    scanf("%d", &dia);
-                    printf("Ingrese hora (0-23): ");
-                    scanf("%d", &hora);
-                    printf("Ingrese minuto (0-59): ");
-                    scanf("%d", &minuto);
-                    printf("Ingrese segundo (0-59): ");
-                    scanf("%d", &segundo);
-                    
-                    if (dia >= 0 && dia < 7) {
-                        generar_programacion_dia(dia);
-                        consultar_momento_especifico(dia, hora, minuto, segundo);
+            }
+            case 2: { // Consultar programación de un día
+                int dia_idx;
+                printf("Ingrese el día a consultar (0=lunes, ..., 6=domingo): ");
+                scanf("%d", &dia_idx);
+
+                if (dia_idx < 0 || dia_idx > 6) {
+                    printf("Día inválido.\n");
+                    break;
+                }
+
+                const char* dia_nombre = nombres_dias[dia_idx];
+                if (verificar_grilla_existe(dia_nombre)) {
+                    printf("Cargando grilla existente para %s...\n", dia_nombre);
+                    if (cargar_grilla_desde_archivo(dia_nombre) > 0) {
+                        mostrar_programacion_completa();
                     } else {
-                        printf("Día inválido\n");
+                        printf("Error: La grilla para %s está vacía o corrupta.\n", dia_nombre);
+                    }
+                } else {
+                    char respuesta;
+                    printf("No hay programación generada para %s. ¿Desea generarla ahora? (s/n): ", dia_nombre);
+                    scanf(" %c", &respuesta);
+                    if (respuesta == 's' || respuesta == 'S') {
+                        generar_programacion_dia(dia_idx);
+                        guardar_grilla_en_archivo(dia_idx);
+                        mostrar_programacion_completa();
                     }
                 }
                 break;
-                
-            case 3:
-                // Mostrar programación del día actual
-                {
-                    printf("Ingrese el día (0=lunes, 1=martes, ..., 6=domingo): ");
-                    scanf("%d", &dia_actual);
-                    
-                    if (dia_actual >= 0 && dia_actual < 7) {
-                        generar_programacion_dia(dia_actual);
-                        printf("\nProgramación completa del día:\n");
-                        
-                        for (int i = 0; i < num_elementos; i++) {
-                            int total_segundos = programacion_dia[i].hora_inicio;
-                            int horas = total_segundos / 3600;
-                            int minutos = (total_segundos % 3600) / 60;
-                            int segundos = total_segundos % 60;
-                            
-                            printf("%02d:%02d:%02d %c %s\n", 
-                                   horas, minutos, segundos,
-                                   programacion_dia[i].tipo,
-                                   programacion_dia[i].nombre);
-                        }
+            }
+            case 3: { // Consultar programación en un momento específico
+                int dia_idx, hora, minuto, segundo;
+                printf("Ingrese el día (0=lunes, ..., 6=domingo): ");
+                scanf("%d", &dia_idx);
+                printf("Ingrese hora (0-23): ");
+                scanf("%d", &hora);
+                printf("Ingrese minuto (0-59): ");
+                scanf("%d", &minuto);
+                printf("Ingrese segundo (0-59): ");
+                scanf("%d", &segundo);
+
+                if (dia_idx < 0 || dia_idx > 6) {
+                    printf("Día inválido.\n");
+                    break;
+                }
+
+                const char* dia_nombre = nombres_dias[dia_idx];
+                if (verificar_grilla_existe(dia_nombre)) {
+                    if (cargar_grilla_desde_archivo(dia_nombre) > 0) {
+                        consultar_momento_especifico(hora, minuto, segundo);
                     } else {
-                        printf("Día inválido\n");
+                        printf("Error: La grilla para %s está vacía o corrupta.\n", dia_nombre);
+                    }
+                } else {
+                    char respuesta;
+                    printf("No hay programación generada para %s. ¿Desea generarla ahora? (s/n): ", dia_nombre);
+                    scanf(" %c", &respuesta);
+                    if (respuesta == 's' || respuesta == 'S') {
+                        generar_programacion_dia(dia_idx);
+                        guardar_grilla_en_archivo(dia_idx);
+                        consultar_momento_especifico(hora, minuto, segundo);
                     }
                 }
                 break;
-                
+            }
             case 4:
                 printf("Saliendo del sistema...\n");
                 break;
-                
             default:
-                printf("Opción inválida\n");
+                printf("Opción inválida.\n");
                 break;
         }
     } while (opcion != 4);
