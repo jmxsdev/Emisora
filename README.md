@@ -40,42 +40,42 @@ A continuación se presenta el diagrama de flujo actualizado que describe la nue
 
 ```mermaid
 graph TD
-    A[Inicio] --> B[Cargar Contenido (.in)];
-    B --> C{Mostrar Menú Principal};
+    A[Inicio] --> B["Cargar Contenido (.in)"]
+    B --> C{"Mostrar Menú Principal"}
     
-    C --> D{Opción 1: Generar Semana};
-    D --> E[Bucle 7 días];
-    E --> F[generar_programacion_dia];
-    F --> G[guardar_grilla_en_archivo];
-    G --> E;
-    E -- Finalizado --> C;
+    C --> D{"Opción 1: Generar Semana"}
+    D --> E["Bucle 7 días"]
+    E --> F["generar_programacion_dia"]
+    F --> G["guardar_grilla_en_archivo"]
+    G --> E
+    E -->|Finalizado| C
 
-    C --> H{Opción 2: Consultar Día};
-    H --> I[Solicitar Día];
-    I --> J{verificar_grilla_existe?};
-    J -- Sí --> K[cargar_grilla_desde_archivo];
-    K --> L[Mostrar Programación];
-    L --> C;
-    J -- No --> M{Generar ahora? (s/n)};
-    M -- Sí --> N[generar_programacion_dia];
-    N --> O[guardar_grilla_en_archivo];
-    O --> L;
-    M -- No --> C;
+    C --> H{"Opción 2: Consultar Día"}
+    H --> I["Solicitar Día"]
+    I --> J{"verificar_grilla_existe?"}
+    J -->|Sí| K["cargar_grilla_desde_archivo"]
+    K --> L["mostrar_programacion_completa"]
+    L --> C
+    J -->|No| M{"Generar ahora? (s/n)"}
+    M -->|Sí| N["generar_programacion_dia"]
+    N --> O["guardar_grilla_en_archivo"]
+    O --> L
+    M -->|No| C
 
-    C --> P{Opción 3: Consultar Momento};
-    P --> Q[Solicitar Día y Hora];
-    Q --> R{verificar_grilla_existe?};
-    R -- Sí --> S[cargar_grilla_desde_archivo];
-    S --> T[Consultar Momento Específico];
-    T --> C;
-    R -- No --> U{Generar ahora? (s/n)};
-    U -- Sí --> V[generar_programacion_dia];
-    V --> W[guardar_grilla_en_archivo];
-    W --> T;
-    U -- No --> C;
+    C --> P{"Opción 3: Consultar Momento"}
+    P --> Q["Solicitar Día y Hora"]
+    Q --> R{"verificar_grilla_existe?"}
+    R -->|Sí| S["cargar_grilla_desde_archivo"]
+    S --> T["consultar_momento_especifico"]
+    T --> C
+    R -->|No| U{"Generar ahora? (s/n)"}
+    U -->|Sí| V["generar_programacion_dia"]
+    V --> W["guardar_grilla_en_archivo"]
+    W --> T
+    U -->|No| C
 
-    C --> X[Opción 4: Salir];
-    X --> Y[Fin];
+    C --> X["Opción 4: Salir"]
+    X --> Y[Fin]
 ```
 
 ## Posibles Mejoras
