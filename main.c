@@ -63,10 +63,10 @@ void leer_canciones() {
     }
 
     fscanf(archivo, "%d", &num_canciones);
+    fgetc(archivo); // consumir el newline anterior
     for (int i = 0; i < num_canciones; i++) {
         // Leer hasta el final de la línea para el nombre
         char linea[200];
-        fgetc(archivo); // consumir el newline anterior
         fgets(linea, sizeof(linea), archivo);
         
         // Parsear la línea manualmente
@@ -128,9 +128,9 @@ void leer_shows() {
     }
 
     fscanf(archivo, "%d", &num_shows);
+    fgetc(archivo); // consumir el newline anterior
     for (int i = 0; i < num_shows; i++) {
         char linea[200];
-        fgetc(archivo); // consumir el newline anterior
         fgets(linea, sizeof(linea), archivo);
         
         // Parsear la línea manualmente
