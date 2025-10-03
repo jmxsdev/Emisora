@@ -5,11 +5,11 @@
 
 // Estructuras para los diferentes tipos de contenido
 typedef struct {
-    char nombre[51];
-    int minutos;
-    int segundos;
+    char Nom[51];
+    int Min;
+    int Seg;
+    int Punt;
     int duracion_segundos;
-    int puntuacion;
 } Cancion;
 
 typedef struct {
@@ -71,23 +71,23 @@ void leer_canciones() {
         
         // Parsear la línea manualmente
         char *token = strrchr(linea, ' ');
-        canciones[i].puntuacion = atoi(token);
+        canciones[i].Punt = atoi(token);
         *token = '\0';
         
         token = strrchr(linea, ' ');
-        canciones[i].segundos = atoi(token);
+        canciones[i].Seg = atoi(token);
         *token = '\0';
         
         token = strrchr(linea, ' ');
-        canciones[i].minutos = atoi(token);
+        canciones[i].Min = atoi(token);
         *token = '\0';
         
         // El resto es el nombre
-        strncpy(canciones[i].nombre, linea, 50);
-        canciones[i].nombre[50] = '\0';
+        strncpy(canciones[i].Nom, linea, 50);
+        canciones[i].Nom[50] = '\0';
         
         // Calcular duración total en segundos
-        canciones[i].duracion_segundos = canciones[i].minutos * 60 + canciones[i].segundos;
+        canciones[i].duracion_segundos = canciones[i].Min * 60 + canciones[i].Seg;
     }
     fclose(archivo);
 }
@@ -258,8 +258,8 @@ void generar_programacion_dia(int dia_semana) {
                 tiempo_actual + canciones[idx].duracion_segundos <= SEGUNDOS_DIA) {
                 
                 // Priorizar canciones con mejor puntuación en horarios estelares
-                if (!es_horario_estelar || canciones[idx].puntuacion >= 50 ||
-                    (cancion_idx != -1 && canciones[idx].puntuacion > canciones[cancion_idx].puntuacion)) {
+                if (!es_horario_estelar || canciones[idx].Punt >= 50 ||
+                    (cancion_idx != -1 && canciones[idx].Punt > canciones[cancion_idx].Punt)) {
                     cancion_idx = idx;
                 }
             }
@@ -278,7 +278,7 @@ void generar_programacion_dia(int dia_semana) {
         
         if (cancion_idx != -1) {
             programacion_dia[num_elementos].tipo = 'C';
-            strcpy(programacion_dia[num_elementos].nombre, canciones[cancion_idx].nombre);
+            strcpy(programacion_dia[num_elementos].nombre, canciones[cancion_idx].Nom);
             programacion_dia[num_elementos].duracion_segundos = canciones[cancion_idx].duracion_segundos;
             programacion_dia[num_elementos].hora_inicio = tiempo_actual;
             
