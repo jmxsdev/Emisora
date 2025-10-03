@@ -10,11 +10,11 @@ Representa una canción individual disponible en la emisora.
 
 ```c
 typedef struct {
-    char nombre[51];
-    int minutos;
-    int segundos;
+    char Nom[51];
+    int Min;
+    int Seg;
     int duracion_segundos;
-    int puntuacion;
+    int Punt;
 } Cancion;
 ```
 
@@ -22,11 +22,11 @@ typedef struct {
 
 | Campo | Tipo | Tamaño | Descripción |
 | :--- | :--- | :--- | :--- |
-| `nombre` | `char[]` | 51 | Nombre de la canción. Limitado a 50 caracteres más el terminador nulo. |
-| `minutos` | `int` | | Parte de los minutos de la duración total de la canción. |
-| `segundos` | `int` | | Parte de los segundos de la duración total de la canción. |
+| `Nom` | `char[]` | 51 | Nombre de la canción. Limitado a 50 caracteres más el terminador nulo. |
+| `Min` | `int` | | Parte de los minutos de la duración total de la canción. |
+| `Seg` | `int` | | Parte de los segundos de la duración total de la canción. |
 | `duracion_segundos` | `int` | | Duración total de la canción calculada en segundos. Se usa para facilitar los cálculos de tiempo. |
-| `puntuacion` | `int` | | Nivel de popularidad de la canción, en una escala de 1 a 100. |
+| `Punt` | `int` | | Nivel de popularidad de la canción, en una escala de 1 a 100. |
 
 ---
 
