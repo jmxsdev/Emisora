@@ -3,3 +3,7 @@ output/
 
 # Ignore output files
 *.out
+
+# Ignore promts files
+
+promts.txt
