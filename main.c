@@ -160,6 +160,21 @@ void leer_shows() {
     fclose(archivo);
 }
 
+// --- ESTRUCTURAS Y FUNCIONES AUXILIARES PARA PLANIFICACIÓN DE SHOWS ---
+typedef struct {
+    int show_indices[MAX_SHOWS];
+    int num_shows;
+    int duracion_total;
+} BloqueEstelar;
+
+// Función de comparación para qsort, para ordenar shows por preferencia
+// Depende del array global `shows`, consistente con el estilo del código.
+int comparar_shows(const void *a, const void *b) {
+    int idx_a = *(const int *)a;
+    int idx_b = *(const int *)b;
+    return shows[idx_b].preferencia - shows[idx_a].preferencia;
+}
+
 // Función para verificar si una canción puede ser reproducida en un momento dado
 int puede_repetir_cancion(int cancion_idx, int tiempo_actual, int ultima_reproduccion[MAX_CANCIONES]) {
     if (ultima_reproduccion[cancion_idx] == -1) return 1;
@@ -168,79 +183,169 @@ int puede_repetir_cancion(int cancion_idx, int tiempo_actual, int ultima_reprodu
 
 // Función para generar la programación de un día
 void generar_programacion_dia(int dia_semana) {
+    // --- FASE 1: PLANIFICACIÓN DE SHOWS ---
+
+    // 1. Crear lista de índices de shows y ordenarla por preferencia
+    int shows_ordenados_idx[MAX_SHOWS];
+    for (int i = 0; i < num_shows; i++) {
+        shows_ordenados_idx[i] = i;
+    }
+    if (num_shows > 0) {
+        qsort(shows_ordenados_idx, num_shows, sizeof(int), comparar_shows);
+    }
+
+    // 2. Definir bloques estelares y sus duraciones
+    BloqueEstelar bloques[3] = {0}; // 0: Mañana, 1: Mediodía, 2: Noche
+    const int duracion_bloques[3] = {2 * 3600, 2 * 3600, 1 * 3600}; // 2h, 2h, 1h
+    int show_asignado[MAX_SHOWS] = {0};
+
+    // 3. Asignar shows a los bloques (algoritmo híbrido)
+    // PASADA 1: Garantizar un show por bloque si es posible
+    for (int j = 0; j < 3; j++) { // Iterar sobre los bloques
+        for (int i = 0; i < num_shows; i++) { // Iterar sobre los shows ordenados
+            int show_idx = shows_ordenados_idx[i];
+            if (!show_asignado[show_idx]) {
+                int duracion_show = shows[show_idx].segmentos * shows[show_idx].duracion_segundos;
+                if (shows[show_idx].segmentos > 1) {
+                    duracion_show += (shows[show_idx].segmentos - 1);
+                }
+
+                if (bloques[j].duracion_total + duracion_show <= duracion_bloques[j]) {
+                    bloques[j].show_indices[bloques[j].num_shows++] = show_idx;
+                    bloques[j].duracion_total += duracion_show;
+                    show_asignado[show_idx] = 1;
+                    break; // Bloque 'j' ya tiene su primer show, pasar al siguiente bloque
+                }
+            }
+        }
+    }
+
+    // PASADA 2: Asignar shows restantes al bloque con más espacio
+    for (int i = 0; i < num_shows; i++) {
+        int show_idx = shows_ordenados_idx[i];
+        if (!show_asignado[show_idx]) {
+            int duracion_show = shows[show_idx].segmentos * shows[show_idx].duracion_segundos;
+            if (shows[show_idx].segmentos > 1) {
+                duracion_show += (shows[show_idx].segmentos - 1);
+            }
+            
+            int mejor_bloque = -1;
+            int max_espacio_libre = -1;
+
+            for (int j = 0; j < 3; j++) {
+                int espacio_libre = duracion_bloques[j] - bloques[j].duracion_total;
+                if (duracion_show <= espacio_libre && espacio_libre > max_espacio_libre) {
+                    max_espacio_libre = espacio_libre;
+                    mejor_bloque = j;
+                }
+            }
+
+            if (mejor_bloque != -1) {
+                bloques[mejor_bloque].show_indices[bloques[mejor_bloque].num_shows++] = show_idx;
+                bloques[mejor_bloque].duracion_total += duracion_show;
+                show_asignado[show_idx] = 1;
+            }
+        }
+    }
+
+    // --- FASE 2: GENERACIÓN DE LA GRILLA --- 
+
     num_elementos = 0;
     int tiempo_actual = HORA_INICIO;
     int ultima_reproduccion[MAX_CANCIONES];
-    
-    // Inicializar array de últimas reproducciones
     for (int i = 0; i < num_canciones; i++) {
         ultima_reproduccion[i] = -1;
     }
     
-    // Contadores y flags para la nueva lógica
     int contador_publicidad[MAX_PUBLICIDAD] = {0};
-    int segmentos_programados[MAX_SHOWS] = {0};
-    int show_usado_hoy[MAX_SHOWS] = {0}; // <-- REQ 1: Para no repetir shows en el día
-    int ultimo_anuncio_idx = -1; // <-- REQ 2: Para no repetir publicidad seguida
+    int ultimo_anuncio_idx = -1;
 
-    // Semilla diferente para cada día
+    int shows_manana_colocados = 0;
+    int shows_mediodia_colocados = 0;
+    int shows_noche_colocados = 0;
+
     srand(time(NULL) + dia_semana);
     
     while (tiempo_actual < SEGUNDOS_DIA && num_elementos < MAX_ELEMENTOS - 1) {
         int hora_actual = tiempo_actual / 3600;
-        int es_horario_estelar = (hora_actual >= 7 && hora_actual < 9) ||
-                               (hora_actual >= 12 && hora_actual < 14) ||
-                               (hora_actual >= 18 && hora_actual < 19);
         
-        int programado = 0; // Flag para saber si ya se programó algo en esta iteración
+        // 1. Comprobar si es momento de insertar un bloque de shows planificado
+        if (hora_actual >= 7 && !shows_manana_colocados) {
+            if (bloques[0].num_shows > 0) {
+                 if(tiempo_actual < 7 * 3600) tiempo_actual = 7 * 3600; 
+                 for (int i = 0; i < bloques[0].num_shows; i++) {
+                    int show_idx = bloques[0].show_indices[i];
+                    int duracion_show = shows[show_idx].segmentos * shows[show_idx].duracion_segundos;
+                    if (shows[show_idx].segmentos > 1) duracion_show += (shows[show_idx].segmentos - 1);
 
-        // 1. Priorizar shows en horarios estelares
-        if (es_horario_estelar && (rand() % 100) < 60) {
-            int show_idx = -1;
-            for (int i = 0; i < num_shows; i++) {
-                // REQ 1: No repetir un show que ya se emitió en el día.
-                if (show_usado_hoy[i] == 0 && segmentos_programados[i] < shows[i].segmentos) {
-                    if (show_idx == -1 || shows[i].preferencia > shows[show_idx].preferencia) {
-                        show_idx = i;
-                    }
+                    programacion_dia[num_elementos].tipo = 'S';
+                    strcpy(programacion_dia[num_elementos].nombre, shows[show_idx].nombre);
+                    programacion_dia[num_elementos].duracion_segundos = duracion_show;
+                    programacion_dia[num_elementos].hora_inicio = tiempo_actual;
+                    
+                    tiempo_actual += duracion_show + 1;
+                    num_elementos++;
                 }
             }
-            
-            if (show_idx != -1 && tiempo_actual + shows[show_idx].duracion_segundos <= SEGUNDOS_DIA) {
-                programacion_dia[num_elementos].tipo = 'S';
-                strcpy(programacion_dia[num_elementos].nombre, shows[show_idx].nombre);
-                programacion_dia[num_elementos].duracion_segundos = shows[show_idx].duracion_segundos;
-                programacion_dia[num_elementos].hora_inicio = tiempo_actual;
-                
-                tiempo_actual += shows[show_idx].duracion_segundos + 1;
-                segmentos_programados[show_idx]++;
-                show_usado_hoy[show_idx] = 1; // Marcar show como usado para todo el día
-                num_elementos++;
-                programado = 1;
+            shows_manana_colocados = 1;
+            if (bloques[0].num_shows > 0) continue;
+        }
+        if (hora_actual >= 12 && !shows_mediodia_colocados) {
+            if (bloques[1].num_shows > 0) {
+                if(tiempo_actual < 12 * 3600) tiempo_actual = 12 * 3600;
+                for (int i = 0; i < bloques[1].num_shows; i++) {
+                    int show_idx = bloques[1].show_indices[i];
+                    int duracion_show = shows[show_idx].segmentos * shows[show_idx].duracion_segundos;
+                    if (shows[show_idx].segmentos > 1) duracion_show += (shows[show_idx].segmentos - 1);
+
+                    programacion_dia[num_elementos].tipo = 'S';
+                    strcpy(programacion_dia[num_elementos].nombre, shows[show_idx].nombre);
+                    programacion_dia[num_elementos].duracion_segundos = duracion_show;
+                    programacion_dia[num_elementos].hora_inicio = tiempo_actual;
+                    
+                    tiempo_actual += duracion_show + 1;
+                    num_elementos++;
+                }
             }
+            shows_mediodia_colocados = 1;
+            if (bloques[1].num_shows > 0) continue;
+        }
+        if (hora_actual >= 18 && !shows_noche_colocados) {
+            if (bloques[2].num_shows > 0) {
+                if(tiempo_actual < 18 * 3600) tiempo_actual = 18 * 3600;
+                for (int i = 0; i < bloques[2].num_shows; i++) {
+                    int show_idx = bloques[2].show_indices[i];
+                    int duracion_show = shows[show_idx].segmentos * shows[show_idx].duracion_segundos;
+                    if (shows[show_idx].segmentos > 1) duracion_show += (shows[show_idx].segmentos - 1);
+
+                    programacion_dia[num_elementos].tipo = 'S';
+                    strcpy(programacion_dia[num_elementos].nombre, shows[show_idx].nombre);
+                    programacion_dia[num_elementos].duracion_segundos = duracion_show;
+                    programacion_dia[num_elementos].hora_inicio = tiempo_actual;
+                    
+                    tiempo_actual += duracion_show + 1;
+                    num_elementos++;
+                }
+            }
+            shows_noche_colocados = 1;
+            if (bloques[2].num_shows > 0) continue;
         }
 
-        if (programado) continue;
-
-        // 2. Intentar programar una canción (respetando reglas)
+        // 2. Programar canciones o publicidad en el tiempo restante
         int cancion_idx = -1;
-        if (num_canciones > 0) { // Solo intentar si hay canciones cargadas
+        if (num_canciones > 0) {
             int intentos = 0;
-            while (intentos < num_canciones * 2) { // Intentar encontrar una canción válida
+            while (intentos < num_canciones * 2) {
                 int idx = rand() % num_canciones;
                 if (puede_repetir_cancion(idx, tiempo_actual, ultima_reproduccion) &&
                     tiempo_actual + canciones[idx].duracion_segundos <= SEGUNDOS_DIA) {
-                    
-                    if (cancion_idx == -1 || (es_horario_estelar && canciones[idx].Punt > canciones[cancion_idx].Punt)) {
-                       cancion_idx = idx;
-                       if (!es_horario_estelar) break; // Fuera de horario estelar, la primera válida es suficiente
-                    }
+                    cancion_idx = idx;
+                    break;
                 }
                 intentos++;
             }
         }
 
-        // Si se encontró una canción válida, programarla
         if (cancion_idx != -1) {
             programacion_dia[num_elementos].tipo = 'C';
             strcpy(programacion_dia[num_elementos].nombre, canciones[cancion_idx].Nom);
@@ -248,16 +353,11 @@ void generar_programacion_dia(int dia_semana) {
             programacion_dia[num_elementos].hora_inicio = tiempo_actual;
             
             tiempo_actual += canciones[cancion_idx].duracion_segundos + 1;
-            ultima_reproduccion[cancion_idx] = tiempo_actual; // Guardar el tiempo de fin
+            ultima_reproduccion[cancion_idx] = tiempo_actual;
             num_elementos++;
-            programado = 1;
         } else {
-            // REQ 2: Si no hay canciones disponibles (por la regla de 4h), rellenar con publicidad.
             int pub_idx = -1;
-            
-            // Se asume que hay al menos 2 publicidades según el requerimiento.
             if (num_publicidades > 1) {
-                // Intentar encontrar una publicidad aleatoria que no sea la última.
                 int intentos = 0;
                 while (intentos < num_publicidades * 2) {
                     int idx = rand() % num_publicidades;
@@ -267,7 +367,6 @@ void generar_programacion_dia(int dia_semana) {
                     }
                     intentos++;
                 }
-                // Si la búsqueda aleatoria falla, buscar secuencialmente la primera que no sea la última.
                 if (pub_idx == -1) {
                     for (int i = 0; i < num_publicidades; i++) {
                         if (i != ultimo_anuncio_idx) {
@@ -277,7 +376,6 @@ void generar_programacion_dia(int dia_semana) {
                     }
                 }
             } else if (num_publicidades > 0) {
-                // Si solo hay una publicidad, se usa esa.
                 pub_idx = 0;
             }
 
@@ -288,16 +386,17 @@ void generar_programacion_dia(int dia_semana) {
                 programacion_dia[num_elementos].hora_inicio = tiempo_actual;
                 
                 tiempo_actual += publicidades[pub_idx].duracion_segundos + 1;
-                contador_publicidad[pub_idx]++; // Se sigue contando por si se quiere analizar, pero no limita.
-                ultimo_anuncio_idx = pub_idx; // Guardar la última publicidad emitida
+                contador_publicidad[pub_idx]++;
+                ultimo_anuncio_idx = pub_idx;
                 num_elementos++;
-                programado = 1;
+            } else {
+                // Si no cabe ni una publicidad, avanzar un poco el tiempo para evitar bucle infinito
+                if (tiempo_actual + 60 < SEGUNDOS_DIA) {
+                    tiempo_actual += 60;
+                } else {
+                    tiempo_actual = SEGUNDOS_DIA;
+                }
             }
-        }
-
-        // Si no se pudo programar nada (ni show, ni canción, ni publicidad), salir para evitar bucle infinito.
-        if (!programado) {
-            break;
         }
     }
 }
