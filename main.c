@@ -3,6 +3,14 @@
 #include <stdlib.h>
 #include <time.h>
 
+// Constantes
+#define MAX_CANCIONES 1000
+#define MAX_PUBLICIDAD 100
+#define MAX_SHOWS 15
+#define MAX_ELEMENTOS 5000
+#define SEGUNDOS_DIA 86400
+#define HORA_INICIO 300 // 00:05:00 en segundos
+
 // Estructuras para los diferentes tipos de contenido
 typedef struct {
     char Nom[51];
@@ -35,13 +43,12 @@ typedef struct {
     int hora_inicio; // en segundos desde 00:00:00
 } ElementoProgramacion;
 
-// Constantes
-#define MAX_CANCIONES 1000
-#define MAX_PUBLICIDAD 100
-#define MAX_SHOWS 15
-#define MAX_ELEMENTOS 5000
-#define SEGUNDOS_DIA 86400
-#define HORA_INICIO 300 // 00:05:00 en segundos
+typedef struct {
+    int show_indices[MAX_SHOWS];
+    int num_shows;
+    int duracion_total;
+} BloqueEstelar;
+
 
 // Variables globales (memoria estática)
 Cancion canciones[MAX_CANCIONES];
@@ -159,13 +166,6 @@ void leer_shows() {
     }
     fclose(archivo);
 }
-
-// --- ESTRUCTURAS Y FUNCIONES AUXILIARES PARA PLANIFICACIÓN DE SHOWS ---
-typedef struct {
-    int show_indices[MAX_SHOWS];
-    int num_shows;
-    int duracion_total;
-} BloqueEstelar;
 
 // Función de comparación para qsort, para ordenar shows por preferencia
 // Depende del array global `shows`, consistente con el estilo del código.
