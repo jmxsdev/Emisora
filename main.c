@@ -222,7 +222,7 @@ void generar_programacion_dia(int dia_semana) {
 
         if (programado) continue;
 
-        // 2. Intentar programar una canción (respetando reglas) o publicidad
+        // 2. Intentar programar una canción (respetando reglas)
         int cancion_idx = -1;
         if (num_canciones > 0) { // Solo intentar si hay canciones cargadas
             int intentos = 0;
@@ -254,35 +254,31 @@ void generar_programacion_dia(int dia_semana) {
         } else {
             // REQ 2: Si no hay canciones disponibles (por la regla de 4h), rellenar con publicidad.
             int pub_idx = -1;
-            int intentos_pub = 0;
-            // Buscar una publicidad que no sea la última emitida
-            while (intentos_pub < num_publicidades * 2 && num_publicidades > 1) {
-                int idx = rand() % num_publicidades;
-                if (idx != ultimo_anuncio_idx && contador_publicidad[idx] < publicidades[idx].veces) {
-                    pub_idx = idx;
-                    break;
-                }
-                intentos_pub++;
-            }
-
-            // Si no se encontró una aleatoria, buscar la primera disponible que no sea la última
-            if (pub_idx == -1) {
-                for (int i = 0; i < num_publicidades; i++) {
-                    if (i != ultimo_anuncio_idx && contador_publicidad[i] < publicidades[i].veces) {
-                        pub_idx = i;
-                        break;
-                    }
-                }
-            }
             
-            // Si incluso así no se encuentra (solo queda una opción y es la última), se usa esa.
-            if (pub_idx == -1) {
-                 for (int i = 0; i < num_publicidades; i++) {
-                    if (contador_publicidad[i] < publicidades[i].veces) {
-                        pub_idx = i;
+            // Se asume que hay al menos 2 publicidades según el requerimiento.
+            if (num_publicidades > 1) {
+                // Intentar encontrar una publicidad aleatoria que no sea la última.
+                int intentos = 0;
+                while (intentos < num_publicidades * 2) {
+                    int idx = rand() % num_publicidades;
+                    if (idx != ultimo_anuncio_idx) {
+                        pub_idx = idx;
                         break;
                     }
+                    intentos++;
                 }
+                // Si la búsqueda aleatoria falla, buscar secuencialmente la primera que no sea la última.
+                if (pub_idx == -1) {
+                    for (int i = 0; i < num_publicidades; i++) {
+                        if (i != ultimo_anuncio_idx) {
+                            pub_idx = i;
+                            break;
+                        }
+                    }
+                }
+            } else if (num_publicidades > 0) {
+                // Si solo hay una publicidad, se usa esa.
+                pub_idx = 0;
             }
 
             if (pub_idx != -1 && tiempo_actual + publicidades[pub_idx].duracion_segundos <= SEGUNDOS_DIA) {
@@ -292,7 +288,7 @@ void generar_programacion_dia(int dia_semana) {
                 programacion_dia[num_elementos].hora_inicio = tiempo_actual;
                 
                 tiempo_actual += publicidades[pub_idx].duracion_segundos + 1;
-                contador_publicidad[pub_idx]++;
+                contador_publicidad[pub_idx]++; // Se sigue contando por si se quiere analizar, pero no limita.
                 ultimo_anuncio_idx = pub_idx; // Guardar la última publicidad emitida
                 num_elementos++;
                 programado = 1;
