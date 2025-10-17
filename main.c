@@ -36,13 +36,15 @@ typedef struct {
     int duracion_segundos;
 } Show;
 
+// Estructura genérica para un elemento en la parrilla de programación.
 typedef struct {
-    char tipo; // 'S', 'P', 'C'
+    char tipo; // 'S' (Show), 'P' (Publicidad), 'C' (Canción)
     char nombre[101];
     int duracion_segundos;
-    int hora_inicio; // en segundos desde 00:00:00
+    int hora_inicio; // En segundos desde las 00:00:00
 } ElementoProgramacion;
 
+// Estructura auxiliar para la planificación de shows en horarios estelares.
 typedef struct {
     int show_indices[MAX_SHOWS];
     int num_shows;
@@ -70,13 +72,13 @@ void leer_canciones() {
     }
 
     fscanf(archivo, "%d", &num_canciones);
-    fgetc(archivo); // consumir el newline anterior
+    fgetc(archivo); // Consumir el newline después del número.
     for (int i = 0; i < num_canciones; i++) {
-        // Leer hasta el final de la línea para el nombre
+        // Se lee la línea completa para manejar nombres con espacios.
         char linea[200];
         fgets(linea, sizeof(linea), archivo);
         
-        // Parsear la línea manualmente
+        // Parseo manual hacia atrás para extraer los datos numéricos.
         char *token = strrchr(linea, ' ');
         canciones[i].Punt = atoi(token);
         *token = '\0';
@@ -89,11 +91,10 @@ void leer_canciones() {
         canciones[i].Min = atoi(token);
         *token = '\0';
         
-        // El resto es el nombre
+        // El resto de la cadena es el nombre de la canción.
         strncpy(canciones[i].Nom, linea, 50);
         canciones[i].Nom[50] = '\0';
         
-        // Calcular duración total en segundos
         canciones[i].duracion_segundos = canciones[i].Min * 60 + canciones[i].Seg;
     }
     fclose(archivo);
@@ -117,7 +118,6 @@ void leer_publicidad() {
         publicidades[num_publicidades].segundos = atoi(token);
         *token = '\0';
         
-        // El resto es el nombre de la empresa
         strncpy(publicidades[num_publicidades].empresa, linea, 30);
         publicidades[num_publicidades].empresa[30] = '\0';
         
@@ -135,12 +135,11 @@ void leer_shows() {
     }
 
     fscanf(archivo, "%d", &num_shows);
-    fgetc(archivo); // consumir el newline anterior
+    fgetc(archivo); // Consumir newline.
     for (int i = 0; i < num_shows; i++) {
         char linea[200];
         fgets(linea, sizeof(linea), archivo);
         
-        // Parsear la línea manualmente
         char *token = strrchr(linea, ' ');
         shows[i].preferencia = atoi(token);
         *token = '\0';
@@ -157,35 +156,33 @@ void leer_shows() {
         shows[i].minutos = atoi(token);
         *token = '\0';
         
-        // El resto es el nombre
         strncpy(shows[i].nombre, linea, 100);
         shows[i].nombre[100] = '\0';
         
-        // Calcular duración total en segundos por segmento
         shows[i].duracion_segundos = shows[i].minutos * 60 + shows[i].segundos;
     }
     fclose(archivo);
 }
 
-// Función de comparación para qsort, para ordenar shows por preferencia
-// Depende del array global `shows`, consistente con el estilo del código.
+// Función de comparación para qsort. Ordena los shows por preferencia descendente.
 int comparar_shows(const void *a, const void *b) {
     int idx_a = *(const int *)a;
     int idx_b = *(const int *)b;
+    // Accede al array global `shows` para la comparación.
     return shows[idx_b].preferencia - shows[idx_a].preferencia;
 }
 
-// Función para verificar si una canción puede ser reproducida en un momento dado
+// Verifica si una canción puede ser programada (no se ha repetido en las últimas 4 horas).
 int puede_repetir_cancion(int cancion_idx, int tiempo_actual, int ultima_reproduccion[MAX_CANCIONES]) {
-    if (ultima_reproduccion[cancion_idx] == -1) return 1;
-    return (tiempo_actual - ultima_reproduccion[cancion_idx]) >= (4 * 3600); // 4 horas en segundos
+    if (ultima_reproduccion[cancion_idx] == -1) return 1; // Nunca se ha reproducido.
+    return (tiempo_actual - ultima_reproduccion[cancion_idx]) >= (4 * 3600); // 4 horas en segundos.
 }
 
-// Función para generar la programación de un día
+// Genera la programación completa para un día.
 void generar_programacion_dia(int dia_semana) {
-    // --- FASE 1: PLANIFICACIÓN DE SHOWS ---
+    // --- FASE 1: PLANIFICACIÓN ESTRATÉGICA DE SHOWS ---
 
-    // 1. Crear lista de índices de shows y ordenarla por preferencia
+    // 1. Ordenar shows por preferencia para priorizar los más importantes.
     int shows_ordenados_idx[MAX_SHOWS];
     for (int i = 0; i < num_shows; i++) {
         shows_ordenados_idx[i] = i;
@@ -194,15 +191,15 @@ void generar_programacion_dia(int dia_semana) {
         qsort(shows_ordenados_idx, num_shows, sizeof(int), comparar_shows);
     }
 
-    // 2. Definir bloques estelares y sus duraciones
-    BloqueEstelar bloques[3] = {0}; // 0: Mañana, 1: Mediodía, 2: Noche
+    // 2. Definir bloques estelares (mañana, mediodía, noche) y sus duraciones.
+    BloqueEstelar bloques[3] = {0};
     const int duracion_bloques[3] = {2 * 3600, 2 * 3600, 1 * 3600}; // 2h, 2h, 1h
     int show_asignado[MAX_SHOWS] = {0};
 
-    // 3. Asignar shows a los bloques (algoritmo híbrido)
-    // PASADA 1: Garantizar un show por bloque si es posible
-    for (int j = 0; j < 3; j++) { // Iterar sobre los bloques
-        for (int i = 0; i < num_shows; i++) { // Iterar sobre los shows ordenados
+    // 3. Asignar shows a los bloques.
+    // Primera pasada: asegurar al menos un show por bloque si es posible.
+    for (int j = 0; j < 3; j++) {
+        for (int i = 0; i < num_shows; i++) {
             int show_idx = shows_ordenados_idx[i];
             if (!show_asignado[show_idx]) {
                 int duracion_show = shows[show_idx].segmentos * shows[show_idx].duracion_segundos;
@@ -214,13 +211,13 @@ void generar_programacion_dia(int dia_semana) {
                     bloques[j].show_indices[bloques[j].num_shows++] = show_idx;
                     bloques[j].duracion_total += duracion_show;
                     show_asignado[show_idx] = 1;
-                    break; // Bloque 'j' ya tiene su primer show, pasar al siguiente bloque
+                    break; // Siguiente bloque.
                 }
             }
         }
     }
 
-    // PASADA 2: Asignar shows restantes al bloque con más espacio
+    // Segunda pasada: asignar shows restantes al bloque con más espacio libre.
     for (int i = 0; i < num_shows; i++) {
         int show_idx = shows_ordenados_idx[i];
         if (!show_asignado[show_idx]) {
@@ -248,7 +245,7 @@ void generar_programacion_dia(int dia_semana) {
         }
     }
 
-    // --- FASE 2: GENERACIÓN DE LA GRILLA --- 
+    // --- FASE 2: GENERACIÓN DE LA GRILLA ---
 
     num_elementos = 0;
     int tiempo_actual = HORA_INICIO;
@@ -264,12 +261,12 @@ void generar_programacion_dia(int dia_semana) {
     int shows_mediodia_colocados = 0;
     int shows_noche_colocados = 0;
 
-    srand(time(NULL) + dia_semana);
+    srand(time(NULL) + dia_semana); // Semilla única para cada día.
     
     while (tiempo_actual < SEGUNDOS_DIA && num_elementos < MAX_ELEMENTOS - 1) {
         int hora_actual = tiempo_actual / 3600;
         
-        // 1. Comprobar si es momento de insertar un bloque de shows planificado
+        // 1. Insertar bloques de shows planificados en sus horarios.
         if (hora_actual >= 7 && !shows_manana_colocados) {
             if (bloques[0].num_shows > 0) {
                  if(tiempo_actual < 7 * 3600) tiempo_actual = 7 * 3600; 
@@ -331,7 +328,7 @@ void generar_programacion_dia(int dia_semana) {
             if (bloques[2].num_shows > 0) continue;
         }
 
-        // 2. Programar canciones o publicidad en el tiempo restante
+        // 2. Rellenar el tiempo restante con canciones o publicidad.
         int cancion_idx = -1;
         if (num_canciones > 0) {
             int intentos = 0;
@@ -346,7 +343,7 @@ void generar_programacion_dia(int dia_semana) {
             }
         }
 
-        if (cancion_idx != -1) {
+        if (cancion_idx != -1) { // Si se encontró una canción válida.
             programacion_dia[num_elementos].tipo = 'C';
             strcpy(programacion_dia[num_elementos].nombre, canciones[cancion_idx].Nom);
             programacion_dia[num_elementos].duracion_segundos = canciones[cancion_idx].duracion_segundos;
@@ -355,19 +352,19 @@ void generar_programacion_dia(int dia_semana) {
             tiempo_actual += canciones[cancion_idx].duracion_segundos + 1;
             ultima_reproduccion[cancion_idx] = tiempo_actual;
             num_elementos++;
-        } else {
+        } else { // Si no, intentar programar publicidad.
             int pub_idx = -1;
             if (num_publicidades > 1) {
                 int intentos = 0;
                 while (intentos < num_publicidades * 2) {
                     int idx = rand() % num_publicidades;
-                    if (idx != ultimo_anuncio_idx) {
+                    if (idx != ultimo_anuncio_idx) { // Evitar publicidad repetida consecutiva.
                         pub_idx = idx;
                         break;
                     }
                     intentos++;
                 }
-                if (pub_idx == -1) {
+                if (pub_idx == -1) { // Fallback si la aleatoriedad falla.
                     for (int i = 0; i < num_publicidades; i++) {
                         if (i != ultimo_anuncio_idx) {
                             pub_idx = i;
@@ -390,7 +387,7 @@ void generar_programacion_dia(int dia_semana) {
                 ultimo_anuncio_idx = pub_idx;
                 num_elementos++;
             } else {
-                // Si no cabe ni una publicidad, avanzar un poco el tiempo para evitar bucle infinito
+                // Si no cabe nada, avanzar el tiempo para evitar bucles infinitos.
                 if (tiempo_actual + 60 < SEGUNDOS_DIA) {
                     tiempo_actual += 60;
                 } else {
@@ -403,45 +400,45 @@ void generar_programacion_dia(int dia_semana) {
 
 // --- Funciones de Persistencia ---
 
-// Nombres de los días para los archivos
 const char *nombres_dias[] = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"};
 
+// Verifica si la grilla para un día ya existe en `output/`.
 int verificar_grilla_existe(const char* dia_nombre) {
     char nombre_archivo[50];
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", dia_nombre);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "output/grilla_%s.out", dia_nombre);
     FILE *archivo = fopen(nombre_archivo, "r");
     if (archivo) {
         fclose(archivo);
-        return 1; // Existe
+        return 1; // Existe.
     }
-    return 0; // No existe
+    return 0; // No existe.
 }
 
+// Carga la programación de un día desde un archivo `output/grilla_*.out`.
 int cargar_grilla_desde_archivo(const char* dia_nombre) {
     char nombre_archivo[50];
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", dia_nombre);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "output/grilla_%s.out", dia_nombre);
     FILE *archivo = fopen(nombre_archivo, "r");
     if (archivo == NULL) {
-        return 0; // No se pudo abrir
+        return 0; // No se pudo abrir.
     }
 
     num_elementos = 0;
-    char linea[200]; // Buffer para una línea
+    char linea[200];
 
-    // Leer línea por línea para mayor robustez
     while (fgets(linea, sizeof(linea), archivo) != NULL && num_elementos < MAX_ELEMENTOS) {
         int horas, minutos, segundos;
         char tipo;
-        char nombre_buffer[101] = ""; // Inicializar para seguridad
+        char nombre_buffer[101] = "";
 
-        // Parsear la línea desde el buffer
+        // sscanf parsea la línea y previene desbordamiento del buffer de nombre.
         if (sscanf(linea, "%d %d %d %c %100[^\n]", &horas, &minutos, &segundos, &tipo, nombre_buffer) == 5) {
             programacion_dia[num_elementos].hora_inicio = horas * 3600 + minutos * 60 + segundos;
             programacion_dia[num_elementos].tipo = tipo;
             strncpy(programacion_dia[num_elementos].nombre, nombre_buffer, 100);
             programacion_dia[num_elementos].nombre[100] = '\0';
 
-            // Calcular la duración basándose en el inicio del siguiente elemento
+            // La duración se calcula restando la hora de inicio del siguiente elemento.
             if (num_elementos > 0) {
                 programacion_dia[num_elementos - 1].duracion_segundos = 
                     programacion_dia[num_elementos].hora_inicio - programacion_dia[num_elementos - 1].hora_inicio - 1;
@@ -450,7 +447,7 @@ int cargar_grilla_desde_archivo(const char* dia_nombre) {
         }
     }
     
-    // Calcular la duración del último elemento de la parrilla
+    // La duración del último elemento se calcula hasta el final del día.
     if (num_elementos > 0) {
         programacion_dia[num_elementos - 1].duracion_segundos = SEGUNDOS_DIA - programacion_dia[num_elementos - 1].hora_inicio;
     }
@@ -459,9 +456,10 @@ int cargar_grilla_desde_archivo(const char* dia_nombre) {
     return num_elementos;
 }
 
+// Guarda la programación de un día en un archivo `output/grilla_*.out`.
 void guardar_grilla_en_archivo(int dia_semana) {
     char nombre_archivo[50];
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", nombres_dias[dia_semana]);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "output/grilla_%s.out", nombres_dias[dia_semana]);
     
     FILE *archivo = fopen(nombre_archivo, "w");
     if (archivo == NULL) {
@@ -487,14 +485,15 @@ void guardar_grilla_en_archivo(int dia_semana) {
 
 // --- Funciones de Consulta y Menú ---
 
+// Busca y muestra qué elemento se está transmitiendo en un momento específico.
 void consultar_momento_especifico(int hora, int minuto, int segundo) {
     int tiempo_busqueda = hora * 3600 + minuto * 60 + segundo;
     
     printf("Programación para las %02d:%02d:%02d:\n", hora, minuto, segundo);
     
     for (int i = 0; i < num_elementos; i++) {
-        if (programacion_dia[i].hora_inicio <= tiempo_busqueda &&
-            programacion_dia[i].hora_inicio + programacion_dia[i].duracion_segundos > tiempo_busqueda) {
+        if (tiempo_busqueda >= programacion_dia[i].hora_inicio &&
+            tiempo_busqueda < programacion_dia[i].hora_inicio + programacion_dia[i].duracion_segundos) {
             
             int total_segundos = programacion_dia[i].hora_inicio;
             int horas_inicio = total_segundos / 3600;
@@ -513,6 +512,7 @@ void consultar_momento_especifico(int hora, int minuto, int segundo) {
     printf("No hay programación en este momento.\n");
 }
 
+// Muestra la programación completa del día cargado en memoria.
 void mostrar_programacion_completa() {
     printf("\n--- Programación Completa del Día ---\n");
     for (int i = 0; i < num_elementos; i++) {
@@ -539,7 +539,7 @@ void mostrar_menu() {
 }
 
 int main() {
-    // Leer archivos de entrada de contenido
+    // Carga inicial de todo el contenido disponible.
     leer_canciones();
     leer_publicidad();
     leer_shows();
@@ -554,7 +554,7 @@ int main() {
         scanf("%d", &opcion);
         
         switch (opcion) {
-            case 1: { // Generar grilla para toda la semana
+            case 1: { // Generar y guardar la grilla para los 7 días de la semana.
                 printf("Generando grillas para toda la semana...\n");
                 for (int dia = 0; dia < 7; dia++) {
                     generar_programacion_dia(dia);
@@ -563,7 +563,7 @@ int main() {
                 printf("¡Grillas para toda la semana generadas exitosamente!\n");
                 break;
             }
-            case 2: { // Consultar programación de un día
+            case 2: { // Consultar la programación de un día específico.
                 int dia_idx;
                 printf("Ingrese el día a consultar (0=lunes, ..., 6=domingo): ");
                 scanf("%d", &dia_idx);
@@ -574,6 +574,7 @@ int main() {
                 }
 
                 const char* dia_nombre = nombres_dias[dia_idx];
+                // Si la grilla ya existe, la carga. Si no, pregunta si se debe generar.
                 if (verificar_grilla_existe(dia_nombre)) {
                     printf("Cargando grilla existente para %s...\n", dia_nombre);
                     if (cargar_grilla_desde_archivo(dia_nombre) > 0) {
@@ -593,7 +594,7 @@ int main() {
                 }
                 break;
             }
-            case 3: { // Consultar programación en un momento específico
+            case 3: { // Consultar qué suena en un momento específico.
                 int dia_idx, hora, minuto, segundo;
                 printf("Ingrese el día (0=lunes, ..., 6=domingo): ");
                 scanf("%d", &dia_idx);
