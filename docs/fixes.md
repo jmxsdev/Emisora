@@ -1,57 +1,17 @@
-# Seguimiento de Issues y Soluciones
+# Historial de Cambios y Mejoras (Fixes & Refactors)
 
-Este documento sirve como un registro de los problemas técnicos encontrados en el proyecto, el proceso de diagnóstico y las soluciones implementadas.
+Este documento resume las correcciones de errores (`fixes`) y las mejoras de código (`refactors`) más importantes que se han aplicado al proyecto a lo largo del tiempo.
 
----
+## Refactors (Mejoras de Código)
 
-## Issue #1: Pérdida del primer carácter al leer archivos de contenido
+*   **Ajuste de `HORA_INICIO` (cee00f3):** Se modificó la constante `HORA_INICIO` a `0` para que la programación comience oficialmente a las 00:00:00, simplificando los cálculos de tiempo.
+*   **Reorganización de Estructuras (85068da):** Se reorganizaron las constantes y se introdujo la estructura `BloqueEstelar` para hacer más clara y mantenible la lógica de planificación de shows.
+*   **Implementación de Planificación de Shows (37e0072):** Se integró en `generar_programacion_dia` un algoritmo de dos pasadas para asignar shows a bloques estelares (mañana, mediodía, noche) de forma más inteligente, priorizando los de mayor preferencia.
+*   **Simplificación de Lógica de Publicidad (1e48b89):** Se refactorizó la selección de publicidad para hacerla más simple y evitar la repetición consecutiva del mismo anuncio.
+*   **Optimización de Selección de Contenido (2bdebb1):** Se mejoró la lógica general para evitar la repetición de canciones (regla de 4 horas) y optimizar la selección de contenido para rellenar la parrilla.
+*   **Actualización de Nomenclatura (2580156):** Se cambió el nombre de la estructura `Canciones` a `Cancion` y se ajustó su uso en todo el código para mayor consistencia.
 
-*   **Fecha:** 28 de septiembre de 2025
-*   **Estado:** Solucionado
+## Fixes (Correcciones de Errores)
 
-### Descripción del Problema
-
-Al leer los archivos `canciones.in` y `shows.in`, el primer carácter del nombre de cada item (excepto el primero) se perdía. Por ejemplo, "Let It Be" se leía como "et It Be".
-
-### Diagnóstico
-
-El error se debía a una llamada a `fgetc()` posicionada incorrectamente dentro de un bucle `for` en las funciones `leer_canciones()` y `leer_shows()`. Esta función, destinada a consumir un único carácter de nueva línea (`\n`) dejado por una llamada previa a `fscanf()`, se ejecutaba en cada iteración, consumiendo así el primer carácter de las líneas subsiguientes.
-
-### Solución
-
-Se movió la llamada a `fgetc()` fuera y antes del bucle `for` en ambas funciones. De este modo, se ejecuta una sola vez y solo consume el carácter de nueva línea original, solucionando el problema de parseo.
-
----
-
-## Issue #2: Error "grilla vacía o corrupta" al leer grillas guardadas
-
-*   **Fecha:** 28 de septiembre de 2025
-*   **Estado:** Solucionado
-
-### Descripción del Problema
-
-Después de implementar la capa de persistencia, el programa guardaba los archivos `grilla_*.out` correctamente. Sin embargo, al intentar leerlos con las opciones 2 o 3 del menú, la función `cargar_grilla_desde_archivo()` fallaba y retornaba `0`, lo que provocaba el mensaje de error "La grilla está vacía o corrupta".
-
-### Diagnóstico
-
-El problema residía en una vulnerabilidad de **desbordamiento de búfer (buffer overflow)** dentro de la función `cargar_grilla_desde_archivo()`. La llamada a `sscanf()` utilizaba el especificador de formato `%[^
-]` para leer el nombre del evento, pero no se le había asignado un límite de ancho.
-
-```c
-// El código problemático
-sscanf(linea, "%d %d %d %c %s[^\n]", ...);
-```
-
-Si un nombre de show en el archivo `.out` tenía una longitud cercana al límite del búfer (100 caracteres), `sscanf` escribía más allá de la memoria asignada para la variable `nombre_buffer`, corrompiendo el stack de la función. Esto resultaba en un comportamiento indefinido, haciendo que la función terminara prematuramente y retornara `0`.
-
-### Solución
-
-Se aplicó un parche de seguridad a la llamada a `sscanf()` añadiendo un límite de ancho de `100` al especificador de formato. Esto asegura que `sscanf` no escribirá más caracteres de los que el búfer puede alojar de forma segura.
-
-```c
-// La solución final y segura
-sscanf(linea, "%d %d %d %c %100[^
-]", ...);
-```
-
-Este cambio resolvió la corrupción de memoria y permitió que la función parseara los archivos de grilla de manera robusta y predecible.
+*   **Sintaxis de Diagramas Mermaid (1f0cba7, aa5538d, 982b72a):** Se corrigieron múltiples errores de sintaxis en los diagramas `mermaid` dentro de los archivos `README.md` y `docs/functions.md` para que se rendericen correctamente.
+*   **Lectura de Archivos de Entrada (c37355f):** Se solucionó un error crítico donde se perdía el primer carácter del nombre de canciones y shows al leer los archivos `.in`. La lectura ahora usa `fgets` y un parseo manual más robusto para capturar las líneas completas.

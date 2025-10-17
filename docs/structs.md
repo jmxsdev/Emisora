@@ -1,6 +1,6 @@
 # Estructuras de Datos del Proyecto
 
-Este documento detalla las estructuras de datos (`structs`) utilizadas en el sistema de planificación de Éxitos FM para modelar las entidades principales: canciones, publicidades, shows y los elementos de la programación final.
+Este documento detalla las estructuras de datos (`structs`) utilizadas en el sistema de planificación de Éxitos FM para modelar las entidades principales y las estructuras auxiliares para la planificación.
 
 ---
 
@@ -13,20 +13,20 @@ typedef struct {
     char Nom[51];
     int Min;
     int Seg;
-    int duracion_segundos;
     int Punt;
+    int duracion_segundos;
 } Cancion;
 ```
 
 ### Campos
 
-| Campo | Tipo | Tamaño | Descripción |
-| :--- | :--- | :--- | :--- |
-| `Nom` | `char[]` | 51 | Nombre de la canción. Limitado a 50 caracteres más el terminador nulo. |
-| `Min` | `int` | | Parte de los minutos de la duración total de la canción. |
-| `Seg` | `int` | | Parte de los segundos de la duración total de la canción. |
-| `duracion_segundos` | `int` | | Duración total de la canción calculada en segundos. Se usa para facilitar los cálculos de tiempo. |
-| `Punt` | `int` | | Nivel de popularidad de la canción, en una escala de 1 a 100. |
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `Nom` | `char[]` | Nombre de la canción (hasta 50 caracteres). |
+| `Min` | `int` | Minutos de duración. |
+| `Seg` | `int` | Segundos de duración. |
+| `Punt` | `int` | Popularidad de la canción (1-100). |
+| `duracion_segundos` | `int` | Duración total calculada en segundos para facilitar cálculos. |
 
 ---
 
@@ -45,18 +45,18 @@ typedef struct {
 
 ### Campos
 
-| Campo | Tipo | Tamaño | Descripción |
-| :--- | :--- | :--- | :--- |
-| `empresa` | `char[]` | 31 | Nombre de la empresa patrocinante. Limitado a 30 caracteres más el terminador nulo. |
-| `segundos` | `int` | | Duración de la cuña en segundos. |
-| `veces` | `int` | | Número de veces que la cuña debe ser reproducida durante el día. |
-| `duracion_segundos` | `int` | | Duración total en segundos. Es redundante con `segundos` pero mantiene consistencia con las otras estructuras. |
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `empresa` | `char[]` | Nombre de la empresa (hasta 30 caracteres). |
+| `segundos` | `int` | Duración de la cuña en segundos. |
+| `veces` | `int` | Número de veces que la cuña debe reproducirse al día. |
+| `duracion_segundos` | `int` | Duración total en segundos (redundante con `segundos` por consistencia). |
 
 ---
 
 ## Estructura `Show`
 
-Representa un show o programa radial, que puede estar compuesto por varios segmentos.
+Representa un programa radial, que puede estar compuesto por varios segmentos.
 
 ```c
 typedef struct {
@@ -71,20 +71,20 @@ typedef struct {
 
 ### Campos
 
-| Campo | Tipo | Tamaño | Descripción |
-| :--- | :--- | :--- | :--- |
-| `nombre` | `char[]` | 101 | Nombre del show. Limitado a 100 caracteres más el terminador nulo. |
-| `minutos` | `int` | | Duración en minutos de **un solo segmento** del show. |
-| `segundos` | `int` | | Duración en segundos de **un solo segmento** del show. |
-| `segmentos` | `int` | | Cantidad total de segmentos que componen el show a lo largo del día. |
-| `preferencia` | `int` | | Nivel de rating o popularidad del show, en una escala de 1 a 10. |
-| `duracion_segundos` | `int` | | Duración total en segundos de **un solo segmento**. |
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `nombre` | `char[]` | Nombre del show (hasta 100 caracteres). |
+| `minutos` | `int` | Duración en minutos de **un solo segmento**. |
+| `segundos` | `int` | Duración en segundos de **un solo segmento**. |
+| `segmentos` | `int` | Cantidad total de segmentos que componen el show. |
+| `preferencia` | `int` | Nivel de rating o popularidad del show (1-10). |
+| `duracion_segundos` | `int` | Duración en segundos de **un solo segmento**. |
 
 ---
 
 ## Estructura `ElementoProgramacion`
 
-Es una estructura genérica utilizada para poblar la parrilla de programación final. Cada instancia de esta estructura representa un bloque de contenido (una canción, un show o una publicidad) que se emitirá en un momento específico.
+Estructura genérica para la parrilla de programación. Cada instancia representa un bloque de contenido (canción, show o publicidad) en un momento específico.
 
 ```c
 typedef struct {
@@ -97,9 +97,31 @@ typedef struct {
 
 ### Campos
 
-| Campo | Tipo | Tamaño | Descripción |
-| :--- | :--- | :--- | :--- |
-| `tipo` | `char` | | Un carácter que identifica el tipo de contenido: 'S' para Show, 'P' para Publicidad, 'C' para Canción. |
-| `nombre` | `char[]` | 101 | Nombre del elemento a transmitir. Se usa el tamaño más grande (el del nombre del show) para ser flexible. |
-| `duracion_segundos` | `int` | | Duración total del elemento en segundos. |
-| `hora_inicio` | `int` | | El momento exacto de inicio de la transmisión, medido en segundos desde la medianoche (00:00:00). |
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `tipo` | `char` | Identificador del tipo de contenido: 'S' (Show), 'P' (Publicidad), 'C' (Canción). |
+| `nombre` | `char[]` | Nombre del elemento a transmitir. |
+| `duracion_segundos` | `int` | Duración total del elemento en segundos. |
+| `hora_inicio` | `int` | Momento de inicio de la transmisión, en segundos desde la medianoche. |
+
+---
+
+## Estructura `BloqueEstelar`
+
+Estructura auxiliar utilizada por el motor de planificación para agrupar shows en los horarios de mayor audiencia (mañana, mediodía, noche).
+
+```c
+typedef struct {
+    int show_indices[MAX_SHOWS];
+    int num_shows;
+    int duracion_total;
+} BloqueEstelar;
+```
+
+### Campos
+
+| Campo | Tipo | Descripción |
+| :--- | :--- | :--- |
+| `show_indices` | `int[]` | Array de índices que apuntan a los shows (en el array global `shows[]`) asignados a este bloque. |
+| `num_shows` | `int` | Contador del número de shows actualmente asignados al bloque. |
+| `duracion_total` | `int` | Suma de las duraciones de todos los shows asignados, para controlar que no exceda el tiempo del bloque. |

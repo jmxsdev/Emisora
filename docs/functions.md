@@ -1,146 +1,89 @@
 # Documentación de Funciones del Proyecto
 
-Este documento ofrece una explicación detallada de cada una de las funciones implementadas en el sistema de planificación de Éxitos FM. Se incluye su propósito, parámetros, valores de retorno, lógica interna y diagramas de flujo para ilustrar su funcionamiento.
+Este documento ofrece una explicación detallada de cada una de las funciones implementadas en el sistema de planificación de Éxitos FM.
 
 ## Librerías Utilizadas
 
-El proyecto utiliza las siguientes librerías estándar de C:
-
-*   `<stdio.h>`: Para operaciones de entrada y salida, como leer y escribir todos los archivos (`.in` y `.out`) y la interacción por consola.
-*   `<string.h>`: Para la manipulación de cadenas de texto (`strcpy`, `strncpy`, `strrchr`).
-*   `<stdlib.h>`: Para la conversión de texto a números (`atoi`) y la generación de números aleatorios (`rand`, `srand`).
-*   `<time.h>`: Para obtener la hora actual (`time()`), que sirve como semilla para el generador de números aleatorios.
-
----
-
-## Diagrama de Flujo General del Programa
-
-Este diagrama ilustra el flujo de ejecución principal, incluyendo la nueva lógica de persistencia de datos.
-
-```mermaid
-graph TD
-    A[Inicio] --> B["Cargar Contenido (.in)"]
-    B --> C{"Mostrar Menú Principal"}
-    
-    C --> D{"Opción 1: Generar Semana"}
-    D --> E["Bucle 7 días"]
-    E --> F["generar_programacion_dia"]
-    F --> G["guardar_grilla_en_archivo"]
-    G --> E
-    E -->|Finalizado| C
-
-    C --> H{"Opción 2: Consultar Día"}
-    H --> I["Solicitar Día"]
-    I --> J{"verificar_grilla_existe?"}
-    J -->|Sí| K["cargar_grilla_desde_archivo"]
-    K --> L["mostrar_programacion_completa"]
-    L --> C
-    J -->|No| M{"Generar ahora? (s/n)"}
-    M -->|Sí| N["generar_programacion_dia"]
-    N --> O["guardar_grilla_en_archivo"]
-    O --> L
-    M -->|No| C
-
-    C --> P{"Opción 3: Consultar Momento"}
-    P --> Q["Solicitar Día y Hora"]
-    Q --> R{"verificar_grilla_existe?"}
-    R -->|Sí| S["cargar_grilla_desde_archivo"]
-    S --> T["consultar_momento_especifico"]
-    T --> C
-    R -->|No| U{"Generar ahora? (s/n)"}
-    U -->|Sí| V["generar_programacion_dia"]
-    V --> W["guardar_grilla_en_archivo"]
-    W --> T
-    U -->|No| C
-
-    C --> X["Opción 4: Salir"]
-    X --> Y[Fin]
-```
+*   `<stdio.h>`: Para operaciones de entrada/salida (archivos `.in`, `.out`, consola).
+*   `<string.h>`: Para manipulación de cadenas (`strcpy`, `strncpy`, `strrchr`).
+*   `<stdlib.h>`: Para conversión de texto (`atoi`) y números aleatorios (`rand`, `srand`, `qsort`).
+*   `<time.h>`: Para la semilla del generador de números aleatorios (`time()`).
 
 ---
 
 ## Funciones de Lectura de Contenido
 
-Estas funciones leen los archivos `.in` para cargar el catálogo de contenido disponible en memoria.
+Estas funciones leen los archivos `.in` para cargar el catálogo de contenido en memoria.
 
 ### `void leer_canciones()`
-*   **Propósito:** Lee `tests/files/canciones1.in` para cargar las canciones en el array global `canciones[]`.
-*   **Parámetros:** Ninguno.
-*   **Retorno:** `void`.
+*   **Propósito:** Lee `tests/files/canciones1.in` y carga las canciones en el array global `canciones[]`.
+*   **Lógica:** Usa `fgets` y `strrchr` para un parseo robusto de cada línea, evitando errores si los nombres contienen espacios.
 
 ### `void leer_publicidad()`
-*   **Propósito:** Lee `tests/files/publicidad1.in` para cargar las publicidades en el array global `publicidades[]`.
-*   **Parámetros:** Ninguno.
-*   **Retorno:** `void`.
+*   **Propósito:** Lee `tests/files/publicidad1.in` y carga las publicidades en `publicidades[]`.
 
 ### `void leer_shows()`
-*   **Propósito:** Lee `tests/files/shows1.in` para cargar los shows en el array global `shows[]`.
-*   **Parámetros:** Ninguno.
-*   **Retorno:** `void`.
+*   **Propósito:** Lee `tests/files/shows1.in` y carga los shows en `shows[]`.
 
 ---
 
 ## Funciones del Motor de Planificación
 
+### `int comparar_shows(const void *a, const void *b)`
+*   **Propósito:** Función de comparación para `qsort`. Permite ordenar un array de índices de shows en orden descendente según su `preferencia`.
+*   **Parámetros:** Punteros `a` y `b` a los índices de show que se están comparando.
+*   **Retorno:** Un entero negativo, cero o positivo si el show `a` es, respectivamente, mayor, igual o menor que el show `b` en preferencia.
+*   **Uso:** Esencial en la Fase 1 de `generar_programacion_dia` para priorizar los shows más importantes.
+
 ### `int puede_repetir_cancion(...)`
-*   **Propósito:** Verifica si una canción puede ser reproducida (regla de no repetición de 4 horas).
+*   **Propósito:** Verifica si una canción puede ser reproducida, aplicando la regla de negocio de no repetir la misma canción en un lapso de 4 horas.
 *   **Retorno:** `1` si puede repetirse, `0` en caso contrario.
 
 ### `void generar_programacion_dia(int dia_semana)`
-*   **Propósito:** Genera la parrilla de programación completa para un día, llenando el array global `programacion_dia[]`.
-*   **Parámetros:** `dia_semana` (0-6) para inicializar la semilla de `rand()`.
-*   **Retorno:** `void`.
+*   **Propósito:** Orquesta toda la generación de la parrilla para un día. Es la función más compleja del sistema.
+*   **Lógica de Planificación (en dos fases):**
+    1.  **Fase 1: Planificación Estratégica de Shows**
+        *   **Ordenamiento:** Crea una lista de índices de shows y la ordena de mayor a menor `preferencia` usando `qsort` con `comparar_shows`.
+        *   **Definición de Bloques:** Establece tres `BloqueEstelar`: Mañana (7:00-9:00), Mediodía (12:00-14:00) y Noche (18:00-19:00).
+        *   **Asignación Híbrida:**
+            *   *Pasada 1:* Intenta asignar al menos un show (el de mayor preferencia disponible) a cada bloque para asegurar que todos tengan contenido estelar.
+            *   *Pasada 2:* Asigna los shows restantes al bloque que tenga más espacio libre, optimizando el uso de los horarios de alta audiencia.
+
+    2.  **Fase 2: Generación de la Grilla Final**
+        *   **Iteración Diaria:** Recorre el día segundo a segundo, desde `HORA_INICIO`.
+        *   **Inserción de Bloques:** Cuando el `tiempo_actual` llega a la hora de inicio de un bloque estelar (7:00, 12:00, 18:00), inserta todos los shows planificados para ese bloque en la parrilla.
+        *   **Relleno con Contenido:** En el tiempo restante entre los bloques de shows, el algoritmo rellena la parrilla alternando entre:
+            *   **Canciones:** Selecciona una canción aleatoria que cumpla la regla de no repetición (`puede_repetir_cancion`).
+            *   **Publicidad:** Si no encuentra una canción adecuada, inserta una cuña publicitaria, asegurándose de no repetir la misma que la anterior.
 
 ---
 
 ## Funciones de Persistencia
 
-Este conjunto de funciones maneja el guardado y la carga de las grillas de programación en archivos `.out`.
-
 ### `int verificar_grilla_existe(const char* dia_nombre)`
-*   **Propósito:** Comprueba si un archivo de grilla (e.g., `grilla_lunes.out`) ya existe.
-*   **Parámetros:** `dia_nombre` (e.g., "lunes").
-*   **Retorno:** `1` si el archivo existe, `0` si no.
-*   **Lógica:** Intenta abrir el archivo en modo lectura (`"r"`). Si `fopen` devuelve un puntero válido, el archivo existe. Se asegura de cerrarlo inmediatamente.
+*   **Propósito:** Comprueba si un archivo `grilla_*.out` ya existe en el disco.
+*   **Retorno:** `1` si existe, `0` si no.
 
 ### `int cargar_grilla_desde_archivo(const char* dia_nombre)`
-*   **Propósito:** Lee un archivo `grilla_*.out` y carga su contenido en el array global `programacion_dia[]`.
-*   **Parámetros:** `dia_nombre`.
-*   **Retorno:** El número de elementos cargados (`num_elementos`). Retorna `0` si el archivo no se puede abrir o está vacío/corrupto.
-*   **Lógica:**
-    1.  Abre el archivo.
-    2.  Lee el archivo línea por línea usando `fgets` para mayor robustez.
-    3.  Parsea cada línea con `sscanf` usando el formato `"%d %d %d %c %100[^
-]"`. El límite `%100` es una medida de seguridad crucial para prevenir desbordamientos de búfer.
-    4.  Calcula la `duracion_segundos` de cada elemento (excepto el último) restando su `hora_inicio` de la del siguiente elemento.
+*   **Propósito:** Lee un archivo `grilla_*.out` y carga su contenido en `programacion_dia[]`.
+*   **Retorno:** El número de elementos cargados. `0` si hay un error.
+*   **Lógica:** Usa `fgets` y `sscanf` para un parseo seguro, previniendo desbordamientos de búfer.
 
 ### `void guardar_grilla_en_archivo(int dia_semana)`
-*   **Propósito:** Escribe el contenido del array `programacion_dia[]` a un archivo de salida `grilla_{dia}.out`.
-*   **Parámetros:** `dia_semana` (0-6).
-*   **Retorno:** `void`.
-*   **Lógica:** Construye el nombre del archivo, lo abre en modo escritura (`"w"`) y escribe cada elemento de la programación en el formato `HH MM SS T Nombre`.
+*   **Propósito:** Escribe el contenido de `programacion_dia[]` a un archivo `grilla_{dia}.out`.
 
 ---
 
 ## Funciones de Consulta y Menú
 
-### `void consultar_momento_especifico(int hora, int minuto, int segundo)`
-*   **Propósito:** Muestra por pantalla qué se está transmitiendo en un momento exacto del día cargado en memoria.
-*   **Parámetros:** `hora`, `minuto`, `segundo` del momento a consultar.
-*   **Retorno:** `void`.
-*   **Nota:** Esta función opera sobre los datos del array global `programacion_dia[]`. La lógica en `main` es responsable de asegurar que los datos del día correcto hayan sido cargados (desde archivo o generados) antes de llamar a esta función.
+### `void consultar_momento_especifico(...)`
+*   **Propósito:** Muestra qué se está transmitiendo en un momento exacto del día cargado en memoria.
 
 ### `void mostrar_programacion_completa()`
-*   **Propósito:** Imprime en consola la programación completa del día actualmente cargado en `programacion_dia[]`.
-*   **Parámetros:** Ninguno.
-*   **Retorno:** `void`.
+*   **Propósito:** Imprime en consola la programación completa del día cargado.
 
 ### `void mostrar_menu()`
-*   **Propósito:** Imprime en pantalla las opciones del menú principal.
-*   **Parámetros:** Ninguno.
-*   **Retorno:** `void`.
+*   **Propósito:** Imprime las opciones del menú principal.
 
 ### `int main()`
-*   **Propósito:** Punto de entrada del programa. Orquesta la carga de contenido, la muestra del menú y la ejecución de las opciones del usuario.
-*   **Lógica del Menú:**
-    *   **Casos 2 y 3:** La lógica fue modificada para implementar persistencia. Primero se llama a `verificar_grilla_existe()`. Si la grilla existe, se carga con `cargar_grilla_desde_archivo()`. Si no, se le pregunta al usuario si desea generarla en ese momento. Esto asegura que los datos en disco se usen preferentemente.
+*   **Propósito:** Punto de entrada. Orquesta la carga de contenido, el menú y las acciones del usuario, interactuando con las funciones de persistencia y planificación.
