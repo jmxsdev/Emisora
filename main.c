@@ -9,7 +9,7 @@
 #define MAX_SHOWS 15
 #define MAX_ELEMENTOS 5000
 #define SEGUNDOS_DIA 86400
-#define HORA_INICIO 300 // 00:05:00 en segundos
+#define HORA_INICIO 0 // 00:00:00 en segundos
 
 // Estructuras para los diferentes tipos de contenido
 typedef struct {
