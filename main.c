@@ -65,7 +65,7 @@ int num_elementos = 0;
 
 // Funciones para leer archivos de entrada
 void leer_canciones() {
-    FILE *archivo = fopen("tests/files/canciones1.in", "r");
+    FILE *archivo = fopen("tests/files/canciones2.in", "r");
     if (archivo == NULL) {
         printf("Error: No se pudo abrir canciones.in\n");
         exit(1);
@@ -101,7 +101,7 @@ void leer_canciones() {
 }
 
 void leer_publicidad() {
-    FILE *archivo = fopen("tests/files/publicidad1.in", "r");
+    FILE *archivo = fopen("tests/files/publicidad2.in", "r");
     if (archivo == NULL) {
         printf("Error: No se pudo abrir publicidad.in\n");
         exit(1);
@@ -128,7 +128,7 @@ void leer_publicidad() {
 }
 
 void leer_shows() {
-    FILE *archivo = fopen("tests/files/shows1.in", "r");
+    FILE *archivo = fopen("tests/files/shows2.in", "r");
     if (archivo == NULL) {
         printf("Error: No se pudo abrir shows.in\n");
         exit(1);
@@ -402,10 +402,10 @@ void generar_programacion_dia(int dia_semana) {
 
 const char *nombres_dias[] = {"lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"};
 
-// Verifica si la grilla para un día ya existe en `output/`.
+// Verifica si la grilla para un día ya existe en `grilla_*.out`.
 int verificar_grilla_existe(const char* dia_nombre) {
     char nombre_archivo[50];
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "output/grilla_%s.out", dia_nombre);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", dia_nombre);
     FILE *archivo = fopen(nombre_archivo, "r");
     if (archivo) {
         fclose(archivo);
@@ -414,10 +414,10 @@ int verificar_grilla_existe(const char* dia_nombre) {
     return 0; // No existe.
 }
 
-// Carga la programación de un día desde un archivo `output/grilla_*.out`.
+// Carga la programación de un día desde un archivo `grilla_*.out`.
 int cargar_grilla_desde_archivo(const char* dia_nombre) {
     char nombre_archivo[50];
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "output/grilla_%s.out", dia_nombre);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", dia_nombre);
     FILE *archivo = fopen(nombre_archivo, "r");
     if (archivo == NULL) {
         return 0; // No se pudo abrir.
@@ -456,10 +456,10 @@ int cargar_grilla_desde_archivo(const char* dia_nombre) {
     return num_elementos;
 }
 
-// Guarda la programación de un día en un archivo `output/grilla_*.out`.
+// Guarda la programación de un día en un archivo `grilla_*.out`.
 void guardar_grilla_en_archivo(int dia_semana) {
     char nombre_archivo[50];
-    snprintf(nombre_archivo, sizeof(nombre_archivo), "output/grilla_%s.out", nombres_dias[dia_semana]);
+    snprintf(nombre_archivo, sizeof(nombre_archivo), "grilla_%s.out", nombres_dias[dia_semana]);
     
     FILE *archivo = fopen(nombre_archivo, "w");
     if (archivo == NULL) {
